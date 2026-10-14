@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Learner Demo</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { -webkit-text-size-adjust: 100%; }
+  body { font-family: system-ui, "Segoe UI", Roboto, sans-serif; background: #0d0a1c; color: #eef0ff; min-height: 100vh; padding: 16px; }
+  .wrap { width: 100%; max-width: 660px; margin: 0 auto; }
+  .label { text-align: center; font-size: 12px; letter-spacing: 2px; color: #a78bfa; text-transform: uppercase; }
+  h1 { text-align: center; font-size: 24px; margin: 6px 0 16px; }
+  .progress { height: 6px; background: #2a2350; border-radius: 99px; overflow: hidden; margin-bottom: 16px; }
+  .progress span { display: block; height: 100%; width: 0; background: linear-gradient(90deg,#7c3aed,#ec4899); transition: width .4s; }
+  .card { background: #1a1533; border: 1px solid #2f2857; border-radius: 18px; padding: 20px; }
+  .q { font-size: 20px; font-weight: 700; margin-bottom: 6px; }
+  .hint { font-size: 14px; color: #b8bcd6; margin-bottom: 14px; line-height: 1.5; }
+  .opts { display: flex; flex-direction: column; gap: 10px; }
+  .opt { padding: 14px 16px; border-radius: 12px; border: 1px solid #3b3370; background: #120e26; color: #eef0ff; font-size: 16px; text-align: left; cursor: pointer; min-height: 52px; width: 100%; }
+  .opt.on { background: linear-gradient(135deg,#7c3aed,#ec4899); border-color: transparent; }
+  textarea { width: 100%; min-height: 120px; padding: 14px; border-radius: 12px; border: 1px solid #3b3370; background: #120e26; color: #eef0ff; font-size: 16px; font-family: inherit; resize: vertical; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .chip { padding: 10px 14px; border-radius: 99px; border: 1px solid #3b3370; background: #120e26; color: #eef0ff; font-size: 14px; cursor: pointer; }
+  .chip.on { background: linear-gradient(135deg,#7c3aed,#ec4899); border-color: transparent; }
+  .nav { display: flex; gap: 10px; margin-top: 16px; }
+  .btn { flex: 1; padding: 16px; border: none; border-radius: 14px; font-size: 16px; font-weight: 700; cursor: pointer; min-height: 52px; color: #fff; background: linear-gradient(135deg,#7c3aed,#ec4899); }
+  .btn.ghost { background: #2a2350; }
+  .hidden { display: none !important; }
+  .reveal { text-align: center; padding: 40px 10px; color: #c4b5fd; font-size: 18px; }
+  .dots::after { content: ""; animation: d 1.2s steps(4,end) infinite; }
+  @keyframes d { 0%{content:"";} 25%{content:".";} 50%{content:"..";} 75%{content:"...";} }
+  .block { background: #1a1533; border: 1px solid #2f2857; border-radius: 16px; padding: 18px; margin-bottom: 14px; }
+  .block h2 { font-size: 13px; letter-spacing: 1.5px; text-transform: uppercase; color: #a78bfa; margin-bottom: 10px; }
+  .block p { font-size: 16px; line-height: 1.6; }
+  .block ul { padding-left: 20px; line-height: 1.8; font-size: 15px; }
+  .quote { font-size: 16px; line-height: 1.7; border-left: 3px solid #ec4899; padding-left: 14px; }
+  .bar { height: 10px; background: #2a2350; border-radius: 99px; overflow: hidden; margin: 6px 0 12px; }
+  .bar span { display: block; height: 100%; width: 0; background: linear-gradient(90deg,#22d3ee,#a78bfa,#ec4899); transition: width .6s; }
+  .row { display: flex; justify-content: space-between; font-size: 14px; color: #d8dcf5; }
+  .tags { font-family: ui-monospace, Consolas, monospace; font-size: 12px; color: #86efac; background: #0d0a1c; border: 1px dashed #3b3370; border-radius: 10px; padding: 12px; line-height: 1.7; word-break: break-word; }
+  .foot { text-align: center; font-size: 11px; color: #7c7aa0; margin: 14px 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="label">AI Learner Demo</div>
+  <h1>Your AI reflection</h1>
+
+  <div id="intro" class="card">
+    <div class="q">Ready to start?</div>
+    <p class="hint">Six quick questions. Takes about two minutes.</p>
+    <div class="nav"><button class="btn" id="startBtn">Start</button></div>
+  </div>
+
+  <div id="quiz" class="hidden">
+    <div class="progress"><span id="bar"></span></div>
+    <div class="card">
+      <div class="q" id="qTitle"></div>
+      <div class="hint" id="qHint"></div>
+      <div id="qBody"></div>
+      <div class="nav">
+        <button class="btn ghost" id="backBtn">Back</button>
+        <button class="btn" id="nextBtn">Next</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="loading" class="card hidden">
+    <div class="reveal">Reading your answers<span class="dots"></span></div>
+  </div>
+
+  <div id="result" class="hidden">
+    <div class="block">
+      <h2>AI sees you</h2>
+      <ul id="reflectList"></ul>
+    </div>
+
+    <div class="block">
+      <h2>Your future self, one year on</h2>
+      <div class="quote" id="future"></div>
+      <h2 style="margin-top:16px;">Advice from your future self</h2>
+      <ul id="advice"></ul>
+    </div>
+
+    <div class="block">
+      <h2>Your prompt check</h2>
+      <div class="row"><span>Prompt score</span><span id="promptPct"></span></div>
+      <div class="bar"><span id="promptBar"></span></div>
+      <p id="promptFix" style="font-size:15px;line-height:1.6;"></p>
+    </div>
+
+    <div class="block">
+      <h2>Your skill picture</h2>
+      <div class="row"><span>Prompting</span><span id="sPrompt"></span></div>
+      <div class="bar"><span id="bPrompt"></span></div>
+      <div class="row"><span>Tool knowledge</span><span id="sTool"></span></div>
+      <div class="bar"><span id="bTool"></span></div>
+      <div class="row"><span>Checking output</span><span id="sCheck"></span></div>
+      <div class="bar"><span id="bCheck"></span></div>
+      <div class="row"><span>Creating content</span><span id="sCreate"></span></div>
+      <div class="bar"><span id="bCreate"></span></div>
+      <p style="font-size:14px;margin-top:8px;" id="gap"></p>
+    </div>
+
+    <div class="block">
+      <h2>Your mission this week</h2>
+      <p id="mission"></p>
+    </div>
+
+    <div class="block">
+      <h2>CRM tags</h2>
+      <div class="tags" id="tags"></div>
+    </div>
+
+    <div class="nav">
+      <button class="btn ghost" onclick="window.print()">Print / Save</button>
+      <button class="btn" onclick="location.reload()">New learner</button>
+    </div>
+  </div>
+
+  <div class="foot">Demo only. Prepared templates filled with the learner's answers. Not live AI output.</div>
+</div>
+
+<script>
+const CAREERS = ["IT","Marketing/Sales","Business Owner","Student","HR","Finance","Engineering","Healthcare","Creative/Arts"];
+const TOOLS = ["ChatGPT","Claude","Gemini","Leonardo AI","Suno","Project Genie","Other","None yet"];
+
+const USES = [
+  "Writing emails and messages",
+  "Writing reports and proposals",
+  "Summarising long documents",
+  "Research and fact-finding",
+  "Planning trips and events",
+  "Planning my weekly schedule",
+  "Cooking and meal planning",
+  "Fitness and wellness routines",
+  "Creating images and visuals",
+  "Making music or audio",
+  "Writing scripts or content",
+  "Coding or building tools",
+  "Analysing data or spreadsheets",
+  "Learning a new skill",
+  "Other"
+];
+
+const SCENARIOS = [
+  { label: "Create a picture", text: "Create a picture of a modern office with a team planning a campaign, bright and friendly." },
+  { label: "My data is messy", text: "I have a messy spreadsheet of sales numbers. Help me clean it and find the three biggest trends." },
+  { label: "Plan an itinerary", text: "Plan a 3-day Tokyo itinerary for a food lover with a budget of around S$1,000." },
+  { label: "Write an email", text: "Write a short, polite email to a customer explaining a delay in delivery." },
+  { label: "Summarise a document", text: "Summarise this 20-page report into five bullet points for my manager." },
+  { label: "Plan my week", text: "Help me plan my week with three work deadlines and time for exercise." },
+  { label: "Something else", text: "" }
+];
+
+const state = { career: null, tools: [], uses: [], scenario: "", prompt: "", change: "" };
+
+const steps = [
+  { id: "career", title: "What best describes your work?", hint: "Choose one.", type: "single", options: CAREERS },
+  { id: "tools", title: "Which AI tools have you used?", hint: "Tick all that apply.", type: "multi", options: TOOLS },
+  { id: "uses", title: "What do you mainly use AI for?", hint: "Tick all that apply.", type: "multi", options: USES },
+  { id: "prompt", title: "How do you usually write your prompt?", hint: "Pick the situation closest to yours, then type the prompt you would really use. Edit the example if you like.", type: "scenario" },
+  { id: "change", title: "What do you want to be different in a year?", hint: "One sentence, in your own words.", type: "text", placeholder: "e.g. I want to stop spending my evenings on reports." }
+];
+
+let idx = 0;
+
+function render() {
+  const s = steps[idx];
+  document.getElementById("bar").style.width = ((idx) / steps.length * 100) + "%";
+  document.getElementById("qTitle").textContent = s.title;
+  document.getElementById("qHint").textContent = s.hint;
+  const body = document.getElementById("qBody");
+  body.innerHTML = "";
+
+  if (s.type === "single" || s.type === "multi") {
+    const wrap = document.createElement("div");
+    wrap.className = "opts";
+    s.options.forEach(opt => {
+      const b = document.createElement("button");
+      b.className = "opt";
+      b.textContent = opt;
+      const isOn = s.type === "single" ? state[s.id] === opt : state[s.id].includes(opt);
+      if (isOn) b.classList.add("on");
+      b.onclick = () => {
+        if (s.type === "single") {
+          state[s.id] = opt;
+        } else if (opt === "None yet") {
+          state[s.id] = ["None yet"];
+        } else {
+          let arr = state[s.id].filter(x => x !== "None yet");
+          state[s.id] = arr.includes(opt) ? arr.filter(x => x !== opt) : [...arr, opt];
+        }
+        render();
+      };
+      wrap.appendChild(b);
+    });
+    body.appendChild(wrap);
+  } else if (s.type === "scenario") {
+    const chips = document.createElement("div");
+    chips.className = "chips";
+    SCENARIOS.forEach(sc => {
+      const c = document.createElement("button");
+      c.className = "chip" + (state.scenario === sc.label ? " on" : "");
+      c.textContent = sc.label;
+      c.onclick = () => {
+        state.scenario = sc.label;
+        if (sc.text) state.prompt = sc.text;
+        render();
+      };
+      chips.appendChild(c);
+    });
+    body.appendChild(chips);
+    const ta = document.createElement("textarea");
+    ta.placeholder = "Type the prompt you would really use...";
+    ta.value = state.prompt;
+    ta.oninput = () => { state.prompt = ta.value; };
+    body.appendChild(ta);
+  } else {
+    const ta = document.createElement("textarea");
+    ta.placeholder = s.placeholder;
+    ta.value = state[s.id];
+    ta.oninput = () => { state[s.id] = ta.value; };
+    body.appendChild(ta);
+  }
+
+  document.getElementById("backBtn").style.visibility = idx === 0 ? "hidden" : "visible";
+  document.getElementById("nextBtn").textContent = idx === steps.length - 1 ? "Reveal my result" : "Next";
+}
+
+function canAdvance() {
+  const s = steps[idx];
+  if (s.type === "single") return !!state[s.id];
+  if (s.type === "multi") return state[s.id].length > 0;
+  if (s.type === "scenario") return state.prompt.trim().length > 0;
+  return state[s.id].trim().length > 0;
+}
+
+document.getElementById("startBtn").onclick = () => {
+  document.getElementById("intro").classList.add("hidden");
+  document.getElementById("quiz").classList.remove("hidden");
+  render();
+};
+
+document.getElementById("nextBtn").onclick = () => {
+  if (!canAdvance()) { alert("Please answer this question first."); return; }
+  if (idx < steps.length - 1) { idx++; render(); }
+  else { showResult(); }
+};
+
+document.getElementById("backBtn").onclick = () => {
+  if (idx > 0) { idx--; render(); }
+};
+
+function scorePrompt(p) {
+  const t = p.toLowerCase();
+  const checks = {
+    role: /\b(act as|you are|as a|role)\b/.test(t),
+    context: p.length > 60 || /\b(for|about|because|my|our|audience|customer|team)\b/.test(t),
+    format: /\b(list|table|bullet|steps|summary|format|words|paragraph|email|slides?|itinerary|points?)\b/.test(t),
+    constraints: /\b(under|within|no more than|avoid|tone|simple|plain|only|limit|budget|\$|s\$)\b/.test(t)
+  };
+  const hits = Object.values(checks).filter(Boolean).length;
+  return { pct: Math.round(hits / 4 * 100), checks };
+}
+
+function promptFix(checks) {
+  const missing = [];
+  if (!checks.role) missing.push("start with a role, such as \"Act as a travel planner\"");
+  if (!checks.context) missing.push("add context about who it's for and why");
+  if (!checks.format) missing.push("ask for a format, such as a bullet list or a table");
+  if (!checks.constraints) missing.push("add a limit, such as a budget, length, or tone");
+  if (missing.length === 0) return "Strong prompt. Keep checking the output before you use it.";
+  return "To improve: " + missing.join("; ") + ".";
+}
+
+function mission(career) {
+  const m = {
+    "IT": "Paste five anonymised support notes into Claude and ask for a grouped summary.",
+    "Marketing/Sales": "Ask ChatGPT for five headline options for your next post, then pick one to refine.",
+    "Business Owner": "List three numbers from your last month and ask Gemini what changed.",
+    "Student": "Paste one reading into Gemini and ask for a five-point summary.",
+    "HR": "Ask ChatGPT for a draft job description for one open role, then check it for bias.",
+    "Finance": "Paste anonymised figures into Gemini and ask for the three biggest changes.",
+    "Engineering": "Give Claude your notes and ask for a clear one-page technical overview.",
+    "Healthcare": "Ask ChatGPT to rewrite one patient leaflet in plain language, then have a colleague check it.",
+    "Creative/Arts": "Describe a project to ChatGPT and ask for ten concept directions."
+  };
+  return m[career] || "Pick one repetitive task and try it with one AI tool tonight.";
+}
+
+function adviceFor(career, uses, change) {
+  const list = [];
+  list.push("Start small. One task a week, done with AI and checked by you, builds the habit faster than a big plan.");
+  if (uses.some(u => u.includes("Writing") || u.includes("report") || u.includes("email")))
+    list.push("Keep a short library of your best prompts so you never start from a blank page.");
+  if (uses.some(u => u.includes("Summaris") || u.includes("Analys") || u.includes("data")))
+    list.push("Always check numbers and names against the source. AI can sound confident and still be wrong.");
+  if (uses.some(u => u.includes("Images") || u.includes("music") || u.includes("Music")))
+    list.push("Describe the mood, the audience, and the purpose. The better the brief, the better the result.");
+  list.push("Protect private information. Anonymise names and figures before pasting them into any tool.");
+  list.push("Celebrate the small wins. Your one sentence about change is already the start of it.");
+  return list.slice(0, 5);
+}
+
+function showResult() {
+  document.getElementById("quiz").classList.add("hidden");
+  document.getElementById("loading").classList.remove("hidden");
+
+  setTimeout(() => {
+    const career = state.career;
+    const change = state.change.trim();
+    const uses = state.uses.length ? state.uses : ["your daily work"];
+    const { pct, checks } = scorePrompt(state.prompt);
+
+    const reflect = [
+      "You work in " + career + ", and you're already asking how AI can help you.",
+      "You've used " + (state.tools.includes("None yet") || !state.tools.length ? "no tools yet, which means you're starting with a clean slate" : state.tools.join(", ")) + ".",
+      "You mainly use AI for: " + uses.slice(0,3).join(", ").toLowerCase() + ".",
+      "Your prompt shows real-world thinking: \"" + state.prompt.trim().slice(0, 90) + (state.prompt.trim().length > 90 ? "..." : "") + "\"",
+      "You want this to change: \"" + change.slice(0, 100) + (change.length > 100 ? "..." : "") + "\"",
+      "That is the hardest step, and you've already named it."
+    ];
+    const rl = document.getElementById("reflectList");
+    rl.innerHTML = "";
+    reflect.forEach(r => { const li = document.createElement("li"); li.textContent = r; rl.appendChild(li); });
+
+    document.getElementById("future").textContent =
+      "Hello from one year on. I remember sitting down as a " + career + " professional, not sure where AI fit. " +
+      "I started with one small habit: checking every answer before I used it. Within a few months, " +
+      (uses.length ? "I was using AI for " + uses.slice(0,2).join(" and ").toLowerCase() : "AI was part of my daily work") +
+      ". The evenings I wanted back are mine again. You're closer than you think. It started with you saying this out loud.";
+
+    const adv = adviceFor(career, uses, change);
+    const al = document.getElementById("advice");
+    al.innerHTML = "";
+    adv.forEach(a => { const li = document.createElement("li"); li.textContent = a; al.appendChild(li); });
+
+    document.getElementById("promptPct").textContent = pct + "%";
+    document.getElementById("promptBar").style.width = pct + "%";
+    document.getElementById("promptFix").textContent = promptFix(checks);
+
+    const toolCount = state.tools.includes("None yet") ? 0 : state.tools.length;
+    const scores = {
+      prompt: pct,
+      tool: Math.min(100, toolCount * 20),
+      check: state.prompt.length > 80 ? 55 : 35,
+      create: state.uses.some(u => u.includes("Images") || u.includes("Music") || u.includes("Writing") || u.includes("scripts")) ? 60 : 30
+    };
+    const set = (id, bar, v) => {
+      document.getElementById(id).textContent = v + "%";
+      document.getElementById(bar).style.width = v + "%";
+    };
+    set("sPrompt","bPrompt",scores.prompt);
+    set("sTool","bTool",scores.tool);
+    set("sCheck","bCheck",scores.check);
+    set("sCreate","bCreate",scores.create);
+
+    const weakest = Object.entries(scores).sort((a,b) => a[1]-b[1])[0][0];
+    const names = { prompt: "prompting", tool: "tool knowledge", check: "checking output", create: "creating content" };
+    document.getElementById("gap").textContent = "Biggest gap: " + names[weakest] + ". This is where the course will help most first.";
+
+    document.getElementById("mission").textContent = mission(career);
+
+    document.getElementById("tags").textContent =
+      "[Career: " + career + "] [Tools: " + (state.tools.join(", ") || "None") + "] [Use: " + (uses.slice(0,3).join(", ")) + "] [Prompt: " + pct + "%] [Gap: " + names[weakest].replace(/ /g,"-") + "]";
+
+    document.getElementById("loading").classList.add("hidden");
+    document.getElementById("result").classList.remove("hidden");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, 2000);
+}
+</script>
+</body>
+</html>
